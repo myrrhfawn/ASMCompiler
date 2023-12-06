@@ -1,0 +1,29 @@
+Program tST2;
+Start Var a, b, c;
+Scan a;
+Scan b;
+Scan c;
+If a Le c:
+	If a Le b:
+		Print a;
+	Else:
+		Print b;
+Else 
+	If c Le b:
+		Print c
+	Else:
+		Print b
+		
+If (a Eg b) And (a Eg c) And (a Eg c):
+	Print 1;
+Else:
+	Print 0;
+If (a Ge 0) Or (b Ge 0) Or (c Ge 0):
+	Print -1
+Else:
+	Print 0
+If Not (a Ge (b ++ c)):
+	Print 10
+Else:
+	Print 0
+Finish;

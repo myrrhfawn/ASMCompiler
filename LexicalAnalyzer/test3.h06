@@ -1,0 +1,11 @@
+Program tEST1;
+Start Var a, b, x;
+For i <- a To b Do:
+	x <- i ** i;
+	Print x;
+x <- 0
+For i <- 1 to a Do:
+	For j <- 1 to b Do
+		x <- x ++ 1
+Print x;
+Finish;

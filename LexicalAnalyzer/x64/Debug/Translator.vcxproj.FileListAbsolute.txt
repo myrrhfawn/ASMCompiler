@@ -1,0 +1,3 @@
+i:\Margo\0000\Системне програмування, частина 2\Курсова робота\Translator\x64\Debug\Translator.exe
+C:\Users\rostyk\Downloads\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\x64\Debug\Translator.exe
+C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\x64\Debug\Translator.exe
