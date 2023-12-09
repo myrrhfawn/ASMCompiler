@@ -35,7 +35,8 @@ void SyntaxAnalyzer::analyzeSyntax() {
     }
 
     RootNode* rootNode = new RootNode();
-    this->createNodes(TokenStringTable, rootNode);
+    LineProcessor* LineProc = new LineProcessor(TokenStringTable);
+    this->createNodes(LineProc, rootNode);
     rootNode->print();
 }
 
@@ -63,49 +64,52 @@ int TokenProcessor::getSize()
     return this->tokens.size();
 }
 
-InputNode::InputNode(RootNode* var, TypeOfTokens type)
+
+std::vector<Token> LineProcessor::getNextLine()
 {
-    this->var = var;
+    if (currentIndex < lines.size()) {
+        std::vector<Token> removedLine = lines[0];
+        lines.erase(lines.begin());
+        return removedLine;
+    }
+    else {
+        throw std::out_of_range("No more lines in the vector.");
+    }
 }
 
-void InputNode::print(const std::string& tab) const
+void LineProcessor::addLine(std::vector<Token> line)
 {
-    std::cout << "Need to input: ";
-    this->var->print();
-    std::cout << std::endl;
+    this->lines.insert(this->lines.begin(), line);
 }
 
-OutputNode::OutputNode(RootNode* var, TypeOfTokens type)
+int LineProcessor::getSize()
 {
-    this->var = var;
-}
-
-void OutputNode::print(const std::string& tab) const
-{
-    std::cout << "Print:  ";
-    this->var->print();
-    std::cout << std::endl;
-
+    return this->lines.size();
 }
 
 
 
 
-void SyntaxAnalyzer::createNodes(std::vector<std::vector<Token>> TokenStringTable, RootNode* rootNode) {
-    for (const auto& TokenString : TokenStringTable) {
+
+void SyntaxAnalyzer::createNodes(LineProcessor* lineProc, RootNode* rootNode, int pos) {
+
+    std::cout << std::endl << "==============================CREATING NODES===============================" << std::endl;
+    std::vector<Token> TokenString;
+
+    while (lineProc->getSize() != 0) {
+        TokenString = lineProc->getNextLine();
         if (TokenString.size() != 0) {
-            if (TokenString[0].type == StartProgram) {
+            if (TokenString[pos].type == StartProgram) {
                 ProgramNode* program = new ProgramNode();
-
-                std::vector<std::vector<Token>> newTable(TokenStringTable.end() - TokenStringTable.size() + 1, TokenStringTable.end());
-                // Видалення останніх п'яти елементів із вихідного вектора
-                TokenStringTable.erase(TokenStringTable.end() - TokenStringTable.size() + 1, TokenStringTable.end());
-                // Виклик функції та передача нового вектора як параметра
-                ;
-                createNodes(newTable, program);
+                std::vector<std::vector<Token>> newTokenTable;
+                while (lineProc->getSize() != 0) {
+                    newTokenTable.push_back(lineProc->getNextLine());
+                }
+                LineProcessor* newLineProc = new LineProcessor(newTokenTable);
+                createNodes(newLineProc, program);
                 rootNode->addChild(program);
             }
-            if (TokenString[0].type == VarStart) {
+            if (TokenString[pos].type == VarStart) {
                 StartVarNode* startVar = new StartVarNode();
                 for (const auto& token : TokenString) {
                     if (token.type == Identifier) {
@@ -115,12 +119,12 @@ void SyntaxAnalyzer::createNodes(std::vector<std::vector<Token>> TokenStringTabl
                 }
                 rootNode->addChild(startVar);
             }
-            if (TokenString[0].type == Identifier) {
-                if (TokenString[1].type == Assign) {
+            if (TokenString[pos].type == Identifier) {
+                if (TokenString[pos + 1].type == Assign) {
 
                     AssignNode* assign = new AssignNode();
-                    VarNode* identifier = new VarNode(TokenString[0].name, TokenString[0].value);
-                    std::vector<Token> newString(TokenString.end() - TokenString.size() + 2, TokenString.end());
+                    VarNode* identifier = new VarNode(TokenString[pos].name, TokenString[pos].value);
+                    std::vector<Token> newString(TokenString.end() - TokenString.size() + pos + 2, TokenString.end());
                     RootNode* expression = new RootNode();
                     TokenProcessor* tokenProc = new TokenProcessor(newString);
                     expression = generateExpressionNode(tokenProc, 0);
@@ -129,34 +133,161 @@ void SyntaxAnalyzer::createNodes(std::vector<std::vector<Token>> TokenStringTabl
                     rootNode->addChild(assign);
                 }
             }
-            if (TokenString[0].type == Comment) {
+            if (TokenString[pos].type == Comment) {
                 CommentNode* comment = new CommentNode(TokenString);
                 rootNode->addChild(comment);
             }
-            if (TokenString[0].type == Input) {
-                if (TokenString.size() > 2) {
+            if (TokenString[pos].type == Input) {
+                if (TokenString.size() - pos > 2) {
                     std::cout << "too many arguments for Scan." << std::endl;
                 }
                 else {
-                    VarNode* var = new VarNode(TokenString[1].name, TokenString[1].value);
+                    VarNode* var = new VarNode(TokenString[pos + 1].name, TokenString[pos + 1].value);
                     InputNode* input = new InputNode(var);
                     rootNode->addChild(input);
                 }
             }
-            if (TokenString[0].type == Output) {
-                if (TokenString.size() > 2) {
+            if (TokenString[pos].type == Output) {
+                if (TokenString.size() - pos > 2) {
                     std::cout << "too many arguments for Print." << std::endl;
                 }
                 else {
-                    VarNode* var = new VarNode(TokenString[1].name, TokenString[1].value);
+                    VarNode* var = new VarNode(TokenString[pos + 1].name, TokenString[pos + 1].value);
                     OutputNode* output = new OutputNode(var);
                     rootNode->addChild(output);
                 }
             }
-            if (TokenString[0].type == EndProgram) {
+            if (TokenString[pos].type == If) {
+                std::vector<Token> newString(TokenString.end() - TokenString.size() + pos + 1, TokenString.end());
+                RootNode* condition = new RootNode();
+                TokenProcessor* tokenProc = new TokenProcessor(newString);
+                condition = generateConditionNode(tokenProc, 0);
+                
+
+                std::vector<std::vector<Token>> newTokenStringTable;
+                std::vector<Token> string = lineProc->getNextLine();
+                bool isElse = false;
+                int ifCounter = 0;
+
+                while (string[pos].type == Tab || string[pos].type == Else) {
+                    if (string[pos].type == Else) {
+                        isElse = true;
+                        string = lineProc->getNextLine();
+                        break;
+                       
+                    }
+                    newTokenStringTable.push_back(string);
+                    if (lineProc->getSize() != 0) {
+                        string = lineProc->getNextLine();
+                    }
+                    else {
+                        break;
+                    }
+                }
+                if (isElse) {
+                    std::vector<std::vector<Token>> elseTokenString;
+                    while (string[pos].type == Tab) {
+                        elseTokenString.push_back(string);
+                        if (lineProc->getSize() != 0) {
+                            string = lineProc->getNextLine();
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                    lineProc->addLine(string);
+                    LineProcessor* elseLineProc = new LineProcessor(elseTokenString);
+                    ElseNode* elseNode = new ElseNode();
+                    createNodes(elseLineProc, elseNode, pos + 1);
+
+                    LineProcessor* ifLineProc = new LineProcessor(newTokenStringTable);
+                    IfNode* ifnode = new IfNode(condition, elseNode);
+                    createNodes(ifLineProc, ifnode, pos + 1);
+                    rootNode->addChild(ifnode);
+                }
+                else {
+                    lineProc->addLine(string);
+                    LineProcessor* ifLineProc = new LineProcessor(newTokenStringTable);
+                    IfNode* ifnode = new IfNode(condition);
+                    createNodes(ifLineProc, ifnode, pos + 1);
+                    rootNode->addChild(ifnode);
+                }
+            }
+            if (TokenString[pos].type == For) {
+                VarNode* i = new VarNode(TokenString[pos + 1].name, TokenString[pos + 1].value);
+                AssignNode* assign = new AssignNode();
+                std::vector<Token> newString;
+                bool isExpression = false;
+                int step = 0;
+                for (const auto token : TokenString) {
+                    if (token.type == Assign) {
+                        isExpression = true;
+                    }
+                    if (token.type == To || token.type == Downto) {
+                        if (token.type == To) {
+                            step = 1;
+                        }
+                        else {
+                            step = -1;
+                        }
+                        break;
+                    }
+                    if (isExpression && token.type != Assign) {
+                        newString.push_back(token);
+                    }
+                }
+                RootNode* expression = new RootNode();
+                TokenProcessor* tokenProc = new TokenProcessor(newString);
+                expression = generateExpressionNode(tokenProc, 0);
+                assign->addChild(i);
+                assign->addChild(expression);
+                
+                std::vector<Token> goalString;
+                isExpression = false;
+                for (const auto token : TokenString) {
+                    if (token.type == To || token.type == Downto) {
+                        isExpression = true;
+                    }
+                    if (token.type == Do) {
+                        break;
+                    }
+                    if (isExpression && token.type != To && token.type != Downto) {
+                        goalString.push_back(token);
+                    }
+                }
+                RootNode* goal = new RootNode();
+                TokenProcessor* goalProc = new TokenProcessor(goalString);
+                goal = generateExpressionNode(goalProc, 0);
+
+                ForNode* forNode = new ForNode(i, assign, step, goal);
+
+
+                std::vector<std::vector<Token>> newTokenStringTable;
+                std::vector<Token> string = lineProc->getNextLine();
+                int ifCounter = 0;
+                while (string[pos].type == Tab) {
+                    newTokenStringTable.push_back(string);
+                    if (lineProc->getSize() != 0) {
+                        string = lineProc->getNextLine();
+                    }
+                    else {
+                        break;
+                    }
+                }
+                lineProc->addLine(string);
+                LineProcessor* forLineProc = new LineProcessor(newTokenStringTable);
+                createNodes(forLineProc, forNode, pos + 1);
+                rootNode->addChild(forNode);
+            }
+            if (TokenString[pos].type == EndProgram) {
+                return;
+            }
+            if (TokenString[pos].type == Unknown) {
+                std::cout << "[ERROR] Unknown lexem in line: " << TokenString[pos].line << std::endl;
                 return;
             }
         }
+        std::cout << "No matches" << std::endl;
     }
 }
 
@@ -179,10 +310,10 @@ int getPriority(Token token) {
             return 3;
             break;
         case LBraket:
-            return 4;
+            return 5;
             break;
         case RBraket:
-            return 4;
+            return 5;
             break;
         case Equality:
             return 1;
@@ -197,7 +328,7 @@ int getPriority(Token token) {
             return 1;
             break;
         case Not:
-            return 1;
+            return 4;
             break;
         case And:
             return 1;
@@ -239,17 +370,25 @@ RootNode* SyntaxAnalyzer::generateExpressionNode(TokenProcessor* tokenProc, int 
     if (firstToken.type == LBraket) {
         std::vector<Token> newString;
 
-        while (!(firstToken.type == RBraket)) {
+        int bracket_count = 1;
+        while (bracket_count != 0) {
             if (tokenProc->getSize() != 0) {
                 firstToken = tokenProc->getNextToken();
             }
             else {
                 break;
             }
-            if (firstToken.type != RBraket) {
+            if (firstToken.type == LBraket) {
+                bracket_count += 1;
+            }
+            if (firstToken.type == RBraket) {
+                bracket_count -= 1;
+            }
+            if (bracket_count != 0) {
                 newString.push_back(firstToken);
             }
         }
+
         auto after_bracket_priority = 0;
         bool isFirst = true;
         for (;;) {
@@ -324,7 +463,119 @@ RootNode* SyntaxAnalyzer::generateExpressionNode(TokenProcessor* tokenProc, int 
     return expression;
 }
 
+RootNode* SyntaxAnalyzer::generateConditionNode(TokenProcessor* tokenProc, int priority) {
+    // Функція викликається рекурсивно для обробки токенів
+    // Починаємо з першого токена
+    //r <- 7 ++ 9 ** 8 ++ 10;
+    ConditionNode* condition = new ConditionNode();
+    Token firstToken = tokenProc->getNextToken();
+    if (firstToken.type == Not) {
+        condition->setSign("Not");
+        NotNode* notnode = new NotNode();
+        condition->addLeftExp(notnode);
+        condition->addRightExp(generateConditionNode(tokenProc, getPriority(firstToken)));
+        if (tokenProc->getSize() != 0) {
+            ConditionNode* condition2 = new ConditionNode();
+            condition2->addLeftExp(condition->GetLeft());
+            condition2->addRightExp(condition->GetRight());
+            condition->addLeftExp(condition2);
+        }
+        else {
+            return condition;
+        }
+    }
+    else {
+        if (firstToken.type == LBraket) {
+            std::vector<Token> newString;
+            int bracket_count = 1;
+            while (bracket_count != 0) {
+                if (tokenProc->getSize() != 0) {
+                    firstToken = tokenProc->getNextToken();
+                }
+                else {
+                    break;
+                }
+                if (firstToken.type == LBraket) {
+                    bracket_count += 1;
+                }
+                if (firstToken.type == RBraket) {
+                    bracket_count -= 1;
+                }
+                if (bracket_count != 0) {
+                    newString.push_back(firstToken);
+                }
+            }
+            auto after_bracket_priority = 0;
+            bool isFirst = true;
+            for (;;) {
+                if (tokenProc->getSize() != 0) {
+                    firstToken = tokenProc->getNextToken();
+                }
+                else {
+                    break;
+                }
+                if (firstToken.type != Number && firstToken.type != Identifier) {
+                    after_bracket_priority = getPriority(firstToken);
+                }
+                if (priority != 0 && after_bracket_priority > priority) {
+                    if (isFirst) {
+                        Token rbracket;
+                        rbracket.name = ")";
+                        rbracket.type = RBraket;
+                        newString.push_back(rbracket);
+                        Token lbracket;
+                        lbracket.name = "(";
+                        lbracket.type = LBraket;
+                        newString.insert(newString.begin(), lbracket);
+                    }
+                    newString.push_back(firstToken);
+                    isFirst = false;
+                }
+                else {
+                    tokenProc->addToken(firstToken);
+                    break;
+                }
+            }
+            TokenProcessor* proc = new TokenProcessor(newString);
+            condition->addLeftExp(generateConditionNode(proc, 0));
+        } else {
+            condition->addLeftExp(parseSimpleExpression(firstToken));
+        }
+    }
+    for (;;) {
+        Token token;
+        if (tokenProc->getSize() == 0) {
+            return condition->GetLeft();
+        }
+        else {
+            token = tokenProc->getNextToken();
+        }
 
+        auto current_priority = getPriority(token);
+
+        if (current_priority <= priority) {
+            tokenProc->addToken(token);
+            return condition->GetLeft();
+        }
+
+        RootNode* right = generateConditionNode(tokenProc, current_priority);
+
+        condition->addRightExp(right);
+
+        if (tokenProc->getSize() == 0) {
+            condition->setSign(token.name);
+            return condition;
+        }
+        else {
+            ConditionNode* condition2 = new ConditionNode();
+            condition2->addLeftExp(condition->GetLeft());
+            condition2->addRightExp(condition->GetRight());
+            condition2->setSign(token.name);
+            condition->addLeftExp(condition2);
+        }
+    }
+    return condition;
+}
 
 void SyntaxAnalyzer::writeToFile(const std::vector<std::string>& lines, const std::string& section) {
     std::ifstream inputFile(this->filename);

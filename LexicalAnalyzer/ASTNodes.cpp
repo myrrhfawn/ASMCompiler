@@ -17,10 +17,9 @@ std::vector<RootNode*> RootNode::getChildren() const {
     return children;
 }
 
-void RootNode::print(const std::string& tab) const
+void RootNode::print(const int tab) const
 {
     for (const RootNode* child : children) {
-        std::cout << tab;
         child->print(tab);
     }
 }
@@ -32,7 +31,7 @@ TypeOfTokens RootNode::getType() const
 
 
 
-void ProgramNode::print(const std::string& tab) const
+void ProgramNode::print(const int tab) const
 {
     std::cout << "Program Start" << std::endl;
     RootNode::print();
@@ -47,17 +46,17 @@ VarNode::VarNode(const std::string identifier, int value, TypeOfTokens type) : t
     this->type = type;
 };
 
-void StartVarNode::print(const std::string& tab) const
+void StartVarNode::print(const int tab) const
 {
-    std::cout << tab << "Data: " << std::endl;
+    std::cout << "Data: " << std::endl;
     RootNode::print(tab);
     std::cout << std::endl;
 }
 
 
-void VarNode::print(const std::string& tab) const
-{
-    std::cout << tab << "Var " << this->identifier << "(" << value << ")";
+void VarNode::print(const int tab) const
+{   
+    std::cout << "Var " << this->identifier << "(" << value << ")";
 }
 
 void VarNode::getVar()
@@ -69,11 +68,14 @@ AssignNode::AssignNode(TypeOfTokens type) {
     this->type = type;
 }
 
-void AssignNode::print(const std::string& tab) const {
+void AssignNode::print(const int tab) const {
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
     std::vector<RootNode*> children = this->getChildren();
-    std::cout << tab << "Assignment to variable ";
+    std::cout << "Assignment to variable: ";
     children[0]->print();
-    std::cout << ": " << std::endl;
+    std::cout << " <- ";
     children[1]->print();
     std::cout << std::endl;
 }
@@ -93,7 +95,7 @@ RootNode* ExpressionNode::GetLeft() const
     return this->leftExp;
 }
 
-void ExpressionNode::print(const std::string& tab) const {
+void ExpressionNode::print(const int tab) const {
    
     RootNode* leftExpression = GetLeft();
     RootNode* rightExpression = GetRight();
@@ -179,7 +181,102 @@ TypeOfTokens ExpressionNode::getType() const
 }
 
 
+ConditionNode::ConditionNode(TypeOfTokens type)
+{
+    this->type = type;
+    this->sign = sign;
+}
 
+ConditionNode::ConditionNode(const ConditionNode& other)
+{
+    type = other.type;
+    sign = other.sign;
+
+    // Рекурсивне копіювання лівого та правого піддерев
+    if (other.leftExp) {
+        leftExp = new ExpressionNode(*dynamic_cast<ExpressionNode*>(other.leftExp));
+    }
+    else {
+        leftExp = nullptr;
+    }
+
+    if (other.rightExp) {
+        rightExp = new ExpressionNode(*dynamic_cast<ExpressionNode*>(other.rightExp));
+    }
+    else {
+        rightExp = nullptr;
+    }
+}
+
+ConditionNode& ConditionNode::operator=(const ConditionNode& other)
+{
+    if (this != &other) {  // Перевірка на самоприсвоєння
+        type = other.type;
+        sign = other.sign;
+
+        // Видалення існуючих піддерев
+        delete leftExp;
+        delete rightExp;
+
+        // Рекурсивне копіювання лівого та правого піддерев
+        if (other.leftExp) {
+            leftExp = new ConditionNode(*dynamic_cast<ConditionNode*>(other.leftExp));
+        }
+        else {
+            leftExp = nullptr;
+        }
+
+        if (other.rightExp) {
+            rightExp = new ConditionNode(*dynamic_cast<ConditionNode*>(other.rightExp));
+        }
+        else {
+            rightExp = nullptr;
+        }
+    }
+
+    return *this;
+}
+
+void ConditionNode::print(const int tab) const {
+    RootNode* leftExpression = GetLeft();
+    RootNode* rightExpression = GetRight();
+    std::cout << "( ";
+    leftExpression->print();
+    std::cout << " " << this->sign << " ";
+    rightExpression->print();
+    std::cout << " )";
+}
+
+void ConditionNode::setSign(std::string sign)
+{
+    this->sign = sign;
+}
+
+void ConditionNode::addLeftExp(RootNode* expression)
+{
+    this->leftExp = expression;
+
+}
+
+void ConditionNode::addRightExp(RootNode* expression)
+{
+    this->rightExp = expression;
+}
+
+TypeOfTokens ConditionNode::getType() const
+{
+    return this->type;
+}
+
+RootNode* ConditionNode::GetRight() const
+{
+    return this->rightExp;
+}
+
+RootNode* ConditionNode::GetLeft() const
+{
+    return this->leftExp;
+}
 
 NumberNode::NumberNode(int value, TypeOfTokens type)
 {
@@ -187,7 +284,7 @@ NumberNode::NumberNode(int value, TypeOfTokens type)
     this->value = value;
 }
 
-void NumberNode::print(const std::string& tab) const {
+void NumberNode::print(const int tab) const {
     std::cout << value;
 }
 
@@ -201,66 +298,137 @@ void NumberNode::setValue(int value)  {
 }
 
 
-IfNode::IfNode(RootNode* condition, TypeOfTokens type)
+IfNode::IfNode(RootNode* condition, RootNode* elseNode, TypeOfTokens type)
 {
-    RootNode::addChild(condition);
-}
-
-void IfNode::print(const std::string& tab) const {
-    std::vector<RootNode*> children;
-    children = RootNode::getChildren();
-    std::cout << "IF( ";
-    children[0]->print();
-    std::cout << " ):" << std::endl;
-    bool firstChild = true;
-
-    for (const auto& child : children) {
-        if (!firstChild) {
-            child->print("\t");
-        }
-        else {
-            firstChild = false;
-        }
-
-    }
-}
-
-
-ConditionNode::ConditionNode(const std::string& sign, TypeOfTokens type) {
     this->type = type;
-    this->sign = sign;
+    this->condition = condition;
+    this->elseNode = elseNode;
 }
 
-void ConditionNode::print(const std::string& tab) const {
+void IfNode::print(const int tab) const
+{
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
     std::vector<RootNode*> children;
     children = RootNode::getChildren();
-    std::cout << "Condition(";
+    std::cout << "IF ";
+    this->condition->print();
+    std::cout << ":" << std::endl;
     bool firstChild = true;
 
     for (const auto& child : children) {
-        if (!firstChild) {
-            std::cout << " " << sign << " ";
-        }
-        else {
-            firstChild = false;
-        }
-
-        child->print();
+        child->print(tab + 1);
     }
-    std::cout << ")";
+    if (this->elseNode != nullptr) {
+        this->elseNode->print(tab);
+    }
 }
 
+void ElseNode::print(const int tab) const
+{
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
+    std::vector<RootNode*> children;
+    children = RootNode::getChildren();
+    std::cout << "Else: " << std::endl;
+    for (const auto& child : children) {
+        child->print(tab + 1);
+    }
+}
+
+
+ForNode::ForNode(RootNode* var, RootNode* assigment, int step, RootNode* goal, TypeOfTokens type)
+{
+    this->var = var;
+    this->assign = assigment;
+    this->step = step;
+    this->goal = goal;
+}
+
+void ForNode::print(const int tab) const
+{
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
+    this->assign->print();
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
+    std::cout << "For( ";
+    this->var->print();
+    if (this->step == 1) {
+        std::cout << " To ";
+    }
+    else {
+        std::cout << " To ";
+    }
+    this->goal->print();
+    std::cout << "): " << std::endl;
+    std::vector<RootNode*> children;
+    children = RootNode::getChildren();
+    for (const auto& child : children) {
+        child->print(tab + 1);
+    }
+}
+
+
+NotNode::NotNode(TypeOfTokens type)
+{
+    this->type = type;
+}
+
+void NotNode::print(const int tab) const
+{
+    std::cout << "";
+}
 
 CommentNode::CommentNode(std::vector<Token> comment, TypeOfTokens type)
 {
     this->comment = comment;
 }
 
-void CommentNode::print(const std::string& tab) const
+void CommentNode::print(const int tab) const
 {
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
     std::cout << "Comment: ";
     for (const auto token : comment) {
         std::cout << token.name << " ";
     }
     std::cout << "." << std::endl;
+}
+
+InputNode::InputNode(RootNode* var, TypeOfTokens type)
+{
+
+    this->var = var;
+}
+
+void InputNode::print(const int tab) const
+{
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
+    std::cout << "Need to input: ";
+    this->var->print();
+    std::cout << std::endl;
+}
+
+OutputNode::OutputNode(RootNode* var, TypeOfTokens type)
+{
+    this->var = var;
+}
+
+void OutputNode::print(const int tab) const
+{
+    for (int i = 0; i < tab; i++) {
+        std::cout << '\t';
+    }
+    std::cout << "Print:  ";
+    this->var->print();
+    std::cout << std::endl;
+
 }

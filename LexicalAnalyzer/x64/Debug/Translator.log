@@ -1,6 +1,2 @@
-﻿  SyntaxAnalyzer.cpp
-C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\SyntaxAnalyzer.cpp(27,19): warning C4018: '<': signed/unsigned mismatch
-C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\SyntaxAnalyzer.cpp(30,70): warning C4018: '<=': signed/unsigned mismatch
-C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\SyntaxAnalyzer.cpp(63,31): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
-C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\SyntaxAnalyzer.cpp(218): warning C4715: 'getPriority': not all control paths return a value
-  Translator.vcxproj -> C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\x64\Debug\Translator.exe
+﻿  ASTNodes.cpp
+  Translator.vcxproj -> C:\Важливе\politech\Системне програмування\Курсач\ASMCompiler\LexicalAnalyzer\x64\Debug\Translator.exe

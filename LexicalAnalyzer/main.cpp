@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	// кількість ідентифікаторів
 	unsigned int IdNum;
 
-	char InputFile[32] = "test1.h06";
+	char InputFile[32] = "test3.h06";
 	FILE* InFile;
 
 	printf("---------------------------------------------------------------------------\n");

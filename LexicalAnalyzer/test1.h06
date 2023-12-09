@@ -1,18 +1,18 @@
 
 Program tST;
-Start Var a, b, r, x, y;
-Scan a;
+Start Var a, b, r, x, y
+Scan a
 Scan b;
-r <- a - b
-Print r;
 r <- a -- b
 Print r;
+r <- a -- b
+Print r
 r <- a ** b
-Print r;
+Print r
 r <- a Div b
-Print r;
+Print r
 x <- ( A -- B ) ** 10 ++ ( A ++ B ) Div 10
-Print x;
+Print x
 y <- x ++ x Mod 10
-Print y;
-Finish;
+Print y
+Finish

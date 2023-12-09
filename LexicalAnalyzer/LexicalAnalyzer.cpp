@@ -66,6 +66,19 @@ unsigned int GetTokens(std::ifstream &inputFile, Token TokenTable[])
 	{
 		std::istringstream lineStream(lineText);
 		std::string token;
+		if (!lineText.empty() && lineText[0] == '\t') {
+			for (int i = 0; i < lineText.length(); i++) {
+				if (lineText[i] == '\t') {
+					TempToken.name = "Tab";
+					TempToken.type = Tab;
+					TempToken.value = 0;
+					TempToken.line = line;
+					TokenTable[NumberOfTokens++] = TempToken;
+				}else {
+					break;
+				}
+			}
+		}
 		while (lineStream >> token) {
 			bool isWorking = true;
 			while (isWorking) {
@@ -80,7 +93,7 @@ unsigned int GetTokens(std::ifstream &inputFile, Token TokenTable[])
 				{	
 					std::regex keywordRegex("\\b(?:[A-Z][a-z])\\b");
 					std::regex identifierRegex("\\b(?:[a-z][A-Z]{0,3})\\b");
-					std::regex digitRegex("[0-9]+\\b");
+					std::regex digitRegex("[+-]?[0-9]+\\b");
 					std::smatch match;
 
 					if (std::regex_search(token, match, identifierRegex)) {
@@ -314,6 +327,9 @@ void PrintTokens(Token TokenTable[], unsigned int TokensNum)
 			break;
 		case Unknown: 
 			strcpy_s(type_tokens, "Unknown"); 
+			break;
+		case Tab:
+			strcpy_s(type_tokens, "Tab");
 			break;
 		}
 		

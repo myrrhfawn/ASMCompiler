@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Важливе\politech\Системне програмування\Курсач\LexicalAnalyzer\x64\Debug\Translator.exe</FullPath>
+      <FullPath>C:\Важливе\politech\Системне програмування\Курсач\ASMCompiler\LexicalAnalyzer\x64\Debug\Translator.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />
